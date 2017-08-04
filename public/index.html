@@ -1,0 +1,243 @@
+<!DOCTYPE>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>CHAT APP</title>
+
+    <!-- Latest compiled and minified CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    
+    <!-- jquery emoji picker -->
+    <link rel="stylesheet" type="text/css" href="css/jquery.emojipicker.css">
+
+    <!-- Jquery -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+
+    <!-- Emoji Data -->
+    <link rel="stylesheet" type="text/css" href="css/jquery.emojipicker.tw.css">
+
+    <!-- Latest compiled and minified JavaScript 
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" 
+        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    -->
+
+    <style>
+      body {
+        margin-left: 20px;
+        margin-top: 30px;
+      }
+
+      .chat-section {
+        display: none;
+      }
+
+      #noMsgErr {
+        display: none;
+      }
+
+    </style>
+  </head>
+
+
+
+  <body>
+
+    <!-- User Registration Form. To be displayed only for the first time. -->
+    <div class="container-fluid">
+      <div id="userRegistration">
+        <h2>Register Yourself First!</h2>
+
+        <div class="row">
+          <div class="col-md-11">
+            <div class="well">
+              <label>Enter UserName: </label>
+              <input type="text" class="form-control" placeholder="Enter user name" id="registeredUser"
+                    onkeydown="if(event.keyCode == 13) { $('#regUserSubmitBtn').click();}"/>
+                <br>
+              <button type="button" class="btn btn-default btn-success" id="regUserSubmitBtn"> SUBMIT </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="chat-section">
+        <h1 class="text-center">Let's Chat!</h1>
+        <div class="row">
+            <div class="col-md-3">
+              <div class="well">
+                <label>Online Users:</label><br>
+                <ul id="users"></ul>
+              </div>
+            </div>
+
+          <div class="col-md-8 col-md-offset-0.5">
+            <div id="chats"></div>
+
+            <div class="well" id="typeMsgSection">
+              <label for="Chats">Type Message: </label>
+              <br/>
+              <input type="text" placeholder="enter message" id="sentMessage" class="form-control"
+                      onkeydown="if(event.keyCode == 13) {$('#hitSend').click();}"></input>
+              <br/>
+
+              <div class="alert alert-danger" id="noMsgErr">
+                <p>Blank Messsages are not entertained</p>
+              </div>
+
+              <br/>
+              <div class="row">
+                <div class="col-md-10">
+                  <button class="btn btn-block btn-primary" id="hitSend">Send</button>
+                </div>
+                <div class="col-md-2">
+                  <button class="btn btn-warning" id="clearChat">Clear Chat</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </body>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    
+    $(document).ready(function() {
+      
+      $userRegistration = $("#userRegistration");
+      $registeredUser = $("#registeredUser");
+      $users = $("#users");
+      $chats = $("#chats");
+      $sentMessage = $("#sentMessage");
+      $hitSend = $("#hitSend"); 
+      $clearChat = $("#clearChat");
+      $regUserSubmitBtn = $("#regUserSubmitBtn");
+
+      $registeredUser.focus();
+
+      var socketClient = io();
+      socketClient.on('connect', function() {
+        //console.log('connected on client - ', socketClient.id);
+        if($chats.html() == 0) {
+          $clearChat.attr('disabled', true);
+        }
+        $hitSend.attr('disabled', true);
+      });
+
+      $sentMessage.keyup(function() {
+        if($(this).val()) {
+          //$("#noMsgErr").hide();
+          $hitSend.attr('disabled', false);
+        } else {
+          $hitSend.attr('disabled', true);
+        }
+      });
+
+      $hitSend.on("click", function(event) {
+        event.preventDefault();
+        var msg = $sentMessage.val();
+
+        if(msg == '') {
+          //$("#noMsgErr").show();
+          return;
+        }
+
+        $sentMessage.val('');
+        socketClient.emit("oldMessage", {msg: msg});
+      });
+
+      $clearChat.on("click", function() {
+        $chats.empty();
+        $clearChat.attr('disabled', true);
+        $sentMessage.focus();
+      });
+
+      $regUserSubmitBtn.on("click", function() {
+        var currentUser = $registeredUser.val();
+        if(currentUser == '') {
+          alert('please enter a name');
+          return;
+        }
+
+        socketClient.emit("thisUser", {user: currentUser, onlineStatus: 'green'});
+        $registeredUser.val('');
+        $userRegistration.toggle("slow", function() {
+          // remove the user registration section and show chats section on the page
+          $(".chat-section").toggle("slow");
+
+          // activating the jquery emoji picker
+          $sentMessage.emojiPicker({
+            position: 'right',
+            height: '300px',
+            width:  '250px'
+          });
+
+          var $emojiPickerDiv = $('#typeMsgSection > div')[0];
+          $emojiPickerDiv.style.width = '100%';
+
+          //console.log($sentMessage[0]);
+
+          // taking care of the UI gliches that come when jquery-emoji-picker is installed
+          // makes the 'text' input take the width of the div it is enclosed in
+          $sentMessage[0].style.width = '100%';
+          // makes the 'text' input responsive
+          $sentMessage[0].style.display = 'flex';
+
+          // to put the cursor on "#sentMessage" input text field
+          $sentMessage.focus();
+        });
+      });
+      
+      socketClient.on("newMessage", function(data) {
+        $chats.append('<div class="well well-sm" style="font-size: 18px">' + '<strong>'+ data.user + ': </strong>' + data.msg + '</div>');
+        
+        // when the user sends a message, the "chats" section must become fixed at the end of the page. Hence, we scrolled the window down. (params : (x, y) // x = document.boyd.scrollwidth, y = document.body.scrollHeight)
+        window.scrollTo(0, document.body.scrollHeight);
+        $clearChat.attr('disabled', false);
+      })
+
+      $(window).blur(function() {
+        socketClient.emit("updateUserStatus", 'yellow');
+        console.log('gone   ' + Date.now());
+        return;
+      });
+
+      $(window).focus(function() {
+        socketClient.emit("updateUserStatus", 'green');
+        console.log('here   ' + Date.now());
+        return;
+      });
+
+      socketClient.on("all-Users", function(obj) {
+        var html = '';
+        var imgSrc = '';
+        console.log('obj  ---- ', obj);
+        for (let i = 0; i < obj.length; i++) {
+          if(obj[i].status == 'green') {
+            imgSrc = ' <img src="https://upload.wikimedia.org/wikipedia/commons/1/1d/Online_dot.png" alt="online-green-dot" height="8px" width="8px"/> ';
+          } else {
+            imgSrc = ' <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Yellow_Dot_by_DraGoth.png/600px-Yellow_Dot_by_DraGoth.png" alt="online-green-dot" height="8px" width="8px"/> ';
+          }
+
+          html +=  '<li class="list-group-item"> ' + imgSrc + obj[i].user + '</li>';
+        }
+
+        $users.empty();
+        $users.append(html);
+      });
+
+    });
+
+</script>
+<!-- jquery emoji picker -->
+<script type="text/javascript" src="js/jquery.emojipicker.js"></script>
+<script type="text/javascript" src="js/jquery.emojis.js"></script>
+
+</html>
