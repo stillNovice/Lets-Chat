@@ -24,7 +24,7 @@ $ node app.js
 ```
 # Usage
 1. Open Chrome
-2. go to localhost:8478
+2. Go to localhost:8478
 3. Enter the name you wish to appear in the Chat section
 4. Tell your friends and make them join too (if they are on the same network).
 5. Enjoy
