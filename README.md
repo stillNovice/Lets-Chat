@@ -31,4 +31,5 @@ $ node app.js
 
 # What's new here :
 1. Online/Away functionality. (All the online users are shown with a green online dots left of their names, and all the offline users have yellow dots).
-2. Emoji Picker to add emojis along with text messages.
+2. User will know who else is typing at a particular moment while enjoying the Group Chat.
+3. Emoji Picker to add emojis along with text messages.
